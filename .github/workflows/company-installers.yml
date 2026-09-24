@@ -1,0 +1,127 @@
+name: Company installers
+
+# Builds unsigned Mac and Windows installers and attaches them to a GitHub
+# Release on this repository. This does not use the official Release workflow:
+# no Apple notarization, no mirror publish, no v* tag.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            os: macos
+            asset: CodexAppManager_aarch64.dmg
+          - platform: macos-15-intel
+            target: x86_64-apple-darwin
+            os: macos
+            asset: CodexAppManager_x86_64.dmg
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            os: windows
+            asset: CodexAppManager_x64-setup.exe
+          - platform: windows-latest
+            target: aarch64-pc-windows-msvc
+            os: windows
+            asset: CodexAppManager_arm64-setup.exe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri -> target
+
+      - run: npm ci
+
+      - name: Vendor Sparkle BinaryDelta
+        if: matrix.os == 'macos'
+        run: bash scripts/vendor-binary-delta.sh
+
+      - name: Build macOS dmg
+        if: matrix.os == 'macos'
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            npm run tauri build -- --bundles dmg --target "${{ matrix.target }}" --no-sign --ci && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::tauri build failed after 3 attempts"
+              exit 1
+            fi
+            echo "::warning::tauri build attempt ${attempt} failed — retrying in 20s"
+            sleep 20
+          done
+          dmg="$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -name '*.dmg' -print -quit)"
+          test -n "$dmg"
+          mkdir -p dist
+          cp "$dmg" "dist/${{ matrix.asset }}"
+
+      - name: Build Windows installer
+        if: matrix.os == 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            npm run tauri build -- --bundles nsis --target "${{ matrix.target }}" --ci && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::tauri build failed after 3 attempts"
+              exit 1
+            fi
+            echo "::warning::tauri build attempt ${attempt} failed — retrying in 20s"
+            sleep 20
+          done
+          setup="$(find "src-tauri/target/${{ matrix.target }}/release/bundle/nsis" -name '*-setup.exe' -print -quit)"
+          test -n "$setup"
+          mkdir -p dist
+          cp "$setup" "dist/${{ matrix.asset }}"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ls -lh dist
+          tag="company-v0.5.10"
+          notes=$'公司内部安装包。未做苹果公证和 Windows 签名。\n\n- Mac 第一次打开若提示无法验证开发者：右键应用，选择打开。\n- Windows 若出现 SmartScreen：点“更多信息”，再点“仍要运行”。\n\n装好后打开设置里的「Codex 配置管理」，填自己的 API Key，加载模型后选带 anthropic/ 的名字，保存，完全退出 Codex，再开新对话。'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* --title "公司内部安装包 0.5.10" --notes "$notes"
+          fi
