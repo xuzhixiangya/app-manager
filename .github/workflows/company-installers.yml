@@ -70,10 +70,20 @@ jobs:
             echo "::warning::tauri build attempt ${attempt} failed — retrying in 20s"
             sleep 20
           done
-          dmg="$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -name '*.dmg' -print -quit)"
-          test -n "$dmg"
+          app="$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$app"
+          # Tauri's unsigned bundle is only linker-signed. macOS then tells
+          # people the downloaded app is damaged. Seal an ad-hoc signature
+          # and pack that app into the dmg.
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          stage="$RUNNER_TEMP/dmg-stage"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          cp -R "$app" "$stage/"
+          ln -s /Applications "$stage/Applications"
           mkdir -p dist
-          cp "$dmg" "dist/${{ matrix.asset }}"
+          hdiutil create -volname "Codex App Manager" -srcfolder "$stage" -ov -format UDZO "dist/${{ matrix.asset }}"
 
       - name: Build Windows installer
         if: matrix.os == 'windows'
