@@ -229,13 +229,28 @@ describe("Settings runtime contract", () => {
     expect(screen.getByText("尽量遵循系统代理；不保证完整 PAC 行为")).toBeInTheDocument();
   });
 
-  it("disables the unfinished Codex config entry", async () => {
+  it("opens Codex gateway settings from the config entry", async () => {
+    const user = userEvent.setup();
+    const onOpenConfig = vi.fn();
     api.getSettings.mockResolvedValue(settings());
-    renderSettings();
+    render(
+      <ThemeProvider>
+        <I18nProvider>
+          <Settings
+            onBack={vi.fn()}
+            onOpenAbout={vi.fn()}
+            onOpenUninstall={vi.fn()}
+            onOpenConfig={onOpenConfig}
+            onOpenThemes={vi.fn()}
+          />
+        </I18nProvider>
+      </ThemeProvider>,
+    );
     await waitFor(() => expect(screen.queryByText("正在加载设置…")).not.toBeInTheDocument());
     const config = screen.getByRole("button", { name: /Codex 配置管理/ });
-    expect(config).toBeDisabled();
-    expect(screen.getByText("当前版本尚未提供")).toBeInTheDocument();
+    expect(config).toBeEnabled();
+    await user.click(config);
+    expect(onOpenConfig).toHaveBeenCalledOnce();
   });
 
   it("keeps repair actions collapsed under More until requested", async () => {

@@ -11,6 +11,8 @@ import type {
   CodexThemeSummary,
   CommandError,
   CodexUpdatePlatform,
+  CodexGatewayInput,
+  CodexGatewayStatus,
   ConfigHealth,
   ConfigWhich,
   Diagnostics,
@@ -1084,6 +1086,29 @@ export const managerApi = {
       return Promise.resolve();
     }
     return invoke<void>("open_logs_dir");
+  },
+  getCodexGateway(): Promise<CodexGatewayStatus> {
+    if (!hasTauriRuntime()) {
+      return Promise.resolve({
+        baseUrl: "https://aiapi.yxrobot.com/v1",
+        model: "",
+        apiKeySet: false,
+        codexRunning: false,
+      });
+    }
+    return invoke<CodexGatewayStatus>("get_codex_gateway");
+  },
+  setCodexGateway(input: CodexGatewayInput): Promise<CodexGatewayStatus> {
+    return invoke<CodexGatewayStatus>("set_codex_gateway", { input });
+  },
+  listCodexGatewayModels(input: {
+    baseUrl: string;
+    apiKey: string;
+  }): Promise<string[]> {
+    if (!hasTauriRuntime()) {
+      return Promise.resolve([]);
+    }
+    return invoke<string[]>("list_codex_gateway_models", { input });
   },
   openCodexHome(): Promise<void> {
     if (!hasTauriRuntime()) {

@@ -13,7 +13,6 @@ import { formatDiagnostics } from "../diagnostics";
 import { Sheet } from "../Sheet";
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? "0.0.0";
-const REPO_URL = "https://github.com/Wangnov/Codex-App-Manager";
 
 export function About({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();
@@ -122,14 +121,6 @@ export function About({ onBack }: { onBack: () => void }) {
               {mgrMsg ? <span className="rsub">{mgrMsg}</span> : null}
             </span>
             <span className="rval">{mgrBusy ? t("about.mgrChecking") : ""}</span>
-          </button>
-          <button className="row" onClick={() => void managerApi.openUrl(REPO_URL)}>
-            <Icon name="message" className="ricon" />
-            <span className="rtext">
-              <span className="rtitle">{t("about.feedback")}</span>
-              <span className="rsub">{REPO_URL.replace("https://", "")}</span>
-            </span>
-            <Icon name="external" className="chev" />
           </button>
           <button className="row" onClick={openLogsDir}>
             <Icon name="folder" className="ricon" />

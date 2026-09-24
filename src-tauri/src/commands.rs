@@ -1757,6 +1757,48 @@ pub fn set_settings(
 }
 
 #[tauri::command]
+pub fn get_codex_gateway() -> Result<crate::app::codex_gateway::CodexGatewayStatus, CommandError> {
+    let home = paths::codex_home_dir()
+        .ok_or_else(|| AppError::Internal("找不到用户主目录".to_string()))?;
+    let mut status = crate::app::codex_gateway::read_gateway(&home);
+    status.codex_running = crate::app::codex_theme::codex_process_running();
+    Ok(status)
+}
+
+#[tauri::command]
+pub fn set_codex_gateway(
+    input: crate::app::codex_gateway::CodexGatewayInput,
+) -> Result<crate::app::codex_gateway::CodexGatewayStatus, CommandError> {
+    if crate::app::codex_theme::codex_process_running() {
+        return Err(AppError::Internal(
+            "Codex 正在运行。请先完全退出 Codex，再保存。".to_string(),
+        )
+        .into());
+    }
+    let home = paths::codex_home_dir()
+        .ok_or_else(|| AppError::Internal("找不到用户主目录".to_string()))?;
+    crate::app::codex_gateway::apply_gateway(&home, &input)
+        .map_err(|error| AppError::Internal(error.to_string()))?;
+    log::info!("codex gateway config saved");
+    let mut status = crate::app::codex_gateway::read_gateway(&home);
+    status.codex_running = false;
+    Ok(status)
+}
+
+#[tauri::command]
+pub async fn list_codex_gateway_models(
+    input: crate::app::codex_gateway::ListModelsInput,
+) -> Result<Vec<String>, CommandError> {
+    let home = paths::codex_home_dir()
+        .ok_or_else(|| AppError::Internal("找不到用户主目录".to_string()))?;
+    let api_key = crate::app::codex_gateway::resolve_gateway_key(&home, &input.api_key)
+        .map_err(|error| AppError::Internal(error.to_string()))?;
+    crate::app::codex_gateway::fetch_model_ids(&input.base_url, &api_key)
+        .await
+        .map_err(|error| AppError::Internal(error.to_string()).into())
+}
+
+#[tauri::command]
 pub fn get_config_health(state: State<'_, ManagerState>) -> ConfigHealth {
     // Always re-read from disk so the UI sees post-restore/reset truth, not a
     // stale snapshot taken at process start.

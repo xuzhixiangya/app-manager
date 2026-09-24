@@ -24,7 +24,7 @@ const LS_KEY = "cam.theme";
 
 function readMode(): ThemeMode {
   const v = localStorage.getItem(LS_KEY);
-  return v === "system" || v === "light" || v === "dark" ? v : "dark";
+  return v === "system" || v === "light" || v === "dark" ? v : "light";
 }
 
 function systemPrefersDark(): boolean {

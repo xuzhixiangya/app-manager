@@ -75,6 +75,20 @@ export interface OperationCompletion {
  * `CommandError` struct (src-tauri/src/errors.rs), which serializes
  * `#[serde(rename_all = "camelCase")]` from `AppError`.
  */
+export interface CodexGatewayStatus {
+  baseUrl: string;
+  model: string;
+  apiKeySet: boolean;
+  codexRunning: boolean;
+}
+
+export interface CodexGatewayInput {
+  baseUrl: string;
+  model: string;
+  /** Empty keeps the key already stored on this computer. */
+  apiKey: string;
+}
+
 export interface CommandError {
   /**
    * Stable machine code, e.g. "unsupported_platform" | "engine_error" |

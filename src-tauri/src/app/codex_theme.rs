@@ -1593,6 +1593,10 @@ fn codex_running() -> bool {
     false
 }
 
+pub(crate) fn codex_process_running() -> bool {
+    codex_running()
+}
+
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn quit_codex(_installed: &std::path::Path) -> Result<(), AppError> {
     Err(AppError::UnsupportedPlatform)

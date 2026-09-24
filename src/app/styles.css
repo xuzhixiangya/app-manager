@@ -4,16 +4,17 @@
    (violet→blue cloud+terminal mark, the ring-status hero, the popover shell),
    rebuilt around ONE consistent top-down light source. Every raised surface
    earns its elevation with a top bevel highlight + a two-layer brand-tinted
-   shadow + a faint surface gradient. Palette is OKLCH, neutrals tinted toward
-   the brand hue (274). Dark is primary; light is a fully-crafted peer. Tokens
-   key on [data-theme]; the ThemeProvider sets data-theme = light | dark.
+   shadow + a faint surface gradient. Palette is OKLCH. Neutrals stay cool and
+   quiet (hue 250, low chroma) so the blue accent can read clearly. Dark is
+   primary; light is a fully-crafted peer. Tokens key on [data-theme]; the
+   ThemeProvider sets data-theme = light | dark.
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Codex brand — the violet→blue cloud, expressed perceptually (hue 274). */
-  --brand-violet: oklch(0.78 0.13 286);
-  --brand-blue: oklch(0.72 0.15 264);
-  --brand-deep: oklch(0.52 0.24 266);
+  /* Codex brand — a clear blue, with a little violet only in the mark. */
+  --brand-violet: oklch(0.74 0.1 270);
+  --brand-blue: oklch(0.68 0.14 250);
+  --brand-deep: oklch(0.48 0.16 252);
 
   /* radii — a touch softer than v1 for the warmer, more tactile read */
   --r-xl: 22px;
@@ -74,26 +75,26 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* surfaces — near-black, faintly blue-violet so the brand feels native */
-  --bg: oklch(0.168 0.014 274);
-  --surface: oklch(0.214 0.016 274);
-  --surface-top: oklch(0.246 0.018 274); /* lighter top stop for material grad */
-  --surface-2: oklch(0.252 0.018 274);
-  --surface-2-top: oklch(0.288 0.02 274);
-  --surface-3: oklch(0.305 0.02 274);
-  --surface-3-top: oklch(0.34 0.022 274);
-  --line: oklch(0.32 0.018 274);
-  --line-2: oklch(0.4 0.024 274);
+  /* surfaces — cool charcoal, almost neutral, so the blue stays the only color */
+  --bg: oklch(0.155 0.008 250);
+  --surface: oklch(0.205 0.01 250);
+  --surface-top: oklch(0.242 0.012 250); /* lighter top stop for material grad */
+  --surface-2: oklch(0.248 0.012 250);
+  --surface-2-top: oklch(0.286 0.014 250);
+  --surface-3: oklch(0.305 0.014 250);
+  --surface-3-top: oklch(0.345 0.016 250);
+  --line: oklch(0.34 0.012 250);
+  --line-2: oklch(0.43 0.016 250);
 
-  --text: oklch(0.965 0.008 274);
-  --text-soft: oklch(0.74 0.02 274);
-  --text-faint: oklch(0.58 0.022 274);
+  --text: oklch(0.97 0.004 250);
+  --text-soft: oklch(0.78 0.01 250);
+  --text-faint: oklch(0.64 0.012 250);
 
-  /* accent — interactive blue-violet (the cloud's core) */
-  --accent: oklch(0.71 0.155 274);
-  --accent-2: oklch(0.62 0.19 270);
-  --accent-deep: oklch(0.82 0.11 280); /* legible accent text on tint */
-  --accent-ink: oklch(0.99 0.01 274);
+  /* accent — clear blue, deep enough that the main button isn't a pale wash */
+  --accent: oklch(0.66 0.14 250);
+  --accent-2: oklch(0.56 0.15 252);
+  --accent-deep: oklch(0.82 0.07 250); /* legible accent text on tint */
+  --accent-ink: oklch(0.985 0.006 250);
 
   /* semantics */
   --success: oklch(0.78 0.155 168);
@@ -118,9 +119,9 @@
   /* material primitives — one light source, top-down */
   --hl-top: inset 0 1px 0 oklch(1 0 0 / 0.07); /* top bevel highlight */
   --hl-top-strong: inset 0 1px 0 oklch(1 0 0 / 0.12);
-  --shadow-1: oklch(0.12 0.03 274 / 0.5); /* tight contact */
-  --shadow-2: oklch(0.08 0.03 274 / 0.45); /* soft ambient */
-  --shadow-3: oklch(0.05 0.02 274 / 0.6); /* deep (popovers) */
+  --shadow-1: oklch(0.1 0.02 250 / 0.5); /* tight contact */
+  --shadow-2: oklch(0.07 0.02 250 / 0.45); /* soft ambient */
+  --shadow-3: oklch(0.04 0.015 250 / 0.6); /* deep (popovers) */
 
   --elev-1: var(--hl-top), 0 1px 2px var(--shadow-1);
   --elev-2: var(--hl-top), 0 1px 2px var(--shadow-1), 0 14px 32px -8px var(--shadow-2);
@@ -139,25 +140,25 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --bg: oklch(0.945 0.008 274);
-  --surface: oklch(0.995 0.0025 274);
+  --bg: oklch(1 0 0);
+  --surface: oklch(1 0 0);
   --surface-top: oklch(1 0 0);
-  --surface-2: oklch(0.972 0.005 274);
-  --surface-2-top: oklch(0.988 0.004 274);
-  --surface-3: oklch(0.95 0.008 274);
-  --surface-3-top: oklch(0.97 0.006 274);
-  --line: oklch(0.9 0.01 274);
-  --line-2: oklch(0.84 0.016 274);
+  --surface-2: oklch(0.97 0 0);
+  --surface-2-top: oklch(0.985 0 0);
+  --surface-3: oklch(0.96 0 0);
+  --surface-3-top: oklch(0.975 0 0);
+  --line: oklch(0.9 0 0);
+  --line-2: oklch(0.84 0 0);
 
-  --text: oklch(0.26 0.022 274);
-  --text-soft: oklch(0.47 0.028 274);
-  --text-faint: oklch(0.62 0.026 274);
+  --text: oklch(0.27 0.04 255);
+  --text-soft: oklch(0.44 0.03 255);
+  --text-faint: oklch(0.55 0.025 250);
 
-  /* deeper, more saturated so it reads on white */
-  --accent: oklch(0.56 0.2 272);
-  --accent-2: oklch(0.49 0.21 270);
-  --accent-deep: oklch(0.5 0.19 272);
-  --accent-ink: oklch(0.99 0.01 274);
+  /* matched to the reference button, about #3CA4EC */
+  --accent: oklch(0.692 0.142 243);
+  --accent-2: oklch(0.64 0.14 245);
+  --accent-deep: oklch(0.5 0.12 243);
+  --accent-ink: oklch(0.99 0.004 243);
 
   --success: oklch(0.62 0.15 162);
   --success-2: oklch(0.55 0.14 162);
@@ -168,7 +169,7 @@
   --danger-2: oklch(0.5 0.2 25);
   --danger-deep: oklch(0.5 0.18 25);
 
-  --accent-tint: color-mix(in oklch, var(--accent) 12%, transparent);
+  --accent-tint: color-mix(in oklch, var(--accent) 14%, white);
   --success-tint: color-mix(in oklch, var(--success) 13%, transparent);
   --amber-tint: color-mix(in oklch, var(--amber) 14%, transparent);
   --danger-tint: color-mix(in oklch, var(--danger) 12%, transparent);
@@ -179,21 +180,17 @@
   /* light material: highlight from white top edge, soft cool shadows */
   --hl-top: inset 0 1px 0 oklch(1 0 0 / 0.9);
   --hl-top-strong: inset 0 1px 0 oklch(1 0 0 / 1);
-  --shadow-1: oklch(0.55 0.05 274 / 0.16);
-  --shadow-2: oklch(0.5 0.06 274 / 0.13);
-  --shadow-3: oklch(0.45 0.06 274 / 0.22);
+  --shadow-1: oklch(0.45 0.05 245 / 0.1);
+  --shadow-2: oklch(0.42 0.07 245 / 0.14);
+  --shadow-3: oklch(0.38 0.08 250 / 0.18);
 
   --elev-1: var(--hl-top), 0 1px 1px var(--shadow-1);
   --elev-2: var(--hl-top), 0 1px 2px var(--shadow-1), 0 12px 28px -10px var(--shadow-2);
   --elev-3: var(--hl-top-strong), 0 2px 6px var(--shadow-1),
     0 26px 60px -12px var(--shadow-3);
 
-  --grain-opacity: 0.035;
-  --ambient: radial-gradient(
-    125% 80% at 50% -8%,
-    color-mix(in oklch, var(--accent) 7%, transparent),
-    transparent 58%
-  );
+  --grain-opacity: 0.015;
+  --ambient: none;
 }
 
 * {
@@ -356,6 +353,31 @@ input {
 /* The rail — same .pop material, fixed width, its own entrance. */
 .rail {
   display: none;
+}
+:root[data-theme="light"][data-window-mode="expanded"] #root,
+:root[data-theme="light"][data-window-mode="expanded"] .rail {
+  background: #fff;
+}
+:root[data-theme="light"][data-window-mode="expanded"] #root > .pop:not(.rail),
+:root[data-theme="light"][data-window-mode="expanded"] #root > [data-view] > .pop {
+  background-color: #fff;
+  background-image: none;
+}
+:root[data-theme="light"] .btn.primary {
+  background: #3ca4ec;
+}
+:root[data-theme="light"] .btn.primary:hover:not(:disabled) {
+  background: #2f98e4;
+}
+:root[data-theme="light"] .rail-item.active {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+  box-shadow: 0 6px 14px -8px var(--accent-glow);
+}
+:root[data-theme="light"] .list {
+  border-color: oklch(0.9 0.02 235);
+  box-shadow: 0 1px 2px oklch(0.45 0.04 245 / 0.06), 0 10px 28px -16px oklch(0.4 0.06 245 / 0.35);
 }
 :root[data-window-mode="expanded"] .rail {
   display: flex;
@@ -1823,7 +1845,7 @@ button.themecard-art:focus-visible {
 .btn.primary {
   background: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--accent) 86%, white),
+    color-mix(in oklch, var(--accent) 96%, white),
     var(--accent-2)
   );
   border-color: transparent;
@@ -1834,7 +1856,7 @@ button.themecard-art:focus-visible {
 .btn.primary:hover:not(:disabled) {
   background: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--accent) 70%, white),
+    color-mix(in oklch, var(--accent) 88%, white),
     var(--accent-2)
   );
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.4),
@@ -1842,7 +1864,14 @@ button.themecard-art:focus-visible {
     0 1px 2px var(--shadow-1);
 }
 .btn.primary:active:not(:disabled) {
-  box-shadow: inset 0 2px 5px oklch(0.2 0.08 274 / 0.45);
+  box-shadow: inset 0 2px 5px oklch(0.22 0.06 250 / 0.45);
+}
+:root[data-theme="light"] .btn.primary,
+:root[data-theme="light"] .btn.primary.big {
+  background: #3ca4ec;
+}
+:root[data-theme="light"] .btn.primary:hover:not(:disabled) {
+  background: #2f98e4;
 }
 .btn.danger {
   background: linear-gradient(
@@ -2490,7 +2519,7 @@ button.row.danger:hover {
   width: 19px;
   height: 19px;
   border-radius: 50%;
-  background: oklch(0.99 0.005 274);
+  background: oklch(0.99 0.004 250);
   box-shadow: 0 1px 3px var(--shadow-2), 0 1px 1px var(--shadow-1);
   transition: transform 0.22s var(--ease-spring);
 }
@@ -2677,6 +2706,16 @@ button.row.danger:hover {
   font-family: var(--mono);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5 8 10.5 12 6.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
 }
 
 /* Signed Manager update notice: stable Home owns the quiet startup check, and
