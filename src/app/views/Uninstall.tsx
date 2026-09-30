@@ -61,6 +61,7 @@ export function Uninstall({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();
   const platform = currentPlatform();
   const win = platform === "windows";
+  const linux = platform === "linux";
   const codexHome = codexHomeDisplay(platform);
   // Default to keeping the user's data (~/.codex on mac, %USERPROFILE%\.codex on
   // Windows). Opting out is deliberate.
@@ -90,6 +91,11 @@ export function Uninstall({ onBack }: { onBack: () => void }) {
   const refreshProbe = useCallback(async () => {
     setProbe("loading");
     try {
+      if (linux) {
+        const s = await managerApi.linuxStatus();
+        setProbe(s.installed ? "managed" : "none");
+        return;
+      }
       const s = win ? await managerApi.winStatus() : await managerApi.macStatus();
       if (s.status === "managed") setProbe("managed");
       else if (s.status === "external") setProbe("external");
@@ -97,7 +103,7 @@ export function Uninstall({ onBack }: { onBack: () => void }) {
     } catch {
       setProbe("error");
     }
-  }, [win]);
+  }, [linux, win]);
 
   useEffect(() => {
     void refreshProbe();
@@ -125,6 +131,9 @@ export function Uninstall({ onBack }: { onBack: () => void }) {
           return;
         }
         setDone(r.message);
+      } else if (linux) {
+        await managerApi.linuxUninstall(keepData);
+        setDone(t("linux.uninstalled"));
       } else {
         const r = await managerApi.macUninstall(keepData);
         if (r.removed && outcomeIsPartial(r.outcome)) {

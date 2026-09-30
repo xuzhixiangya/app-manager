@@ -21,6 +21,8 @@ const PROVIDER_NAME: &str = "公司 AI 网关";
 pub struct CodexGatewayStatus {
     pub base_url: String,
     pub model: String,
+    /// Codex `model_reasoning_effort`: none, minimal, low, medium, high, xhigh.
+    pub reasoning_effort: String,
     pub api_key_set: bool,
     pub codex_running: bool,
 }
@@ -30,6 +32,7 @@ pub struct CodexGatewayStatus {
 pub struct CodexGatewayInput {
     pub base_url: String,
     pub model: String,
+    pub reasoning_effort: String,
     /// Empty keeps the key already stored on this computer.
     pub api_key: String,
 }
@@ -49,7 +52,10 @@ pub fn read_gateway(codex_home: &Path) -> CodexGatewayStatus {
     let base_url = provider_base_url(&config).unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
     CodexGatewayStatus {
         base_url,
-        model: top_level_value(&config, "model").unwrap_or_default(),
+        model: top_level_value(&config, "model").unwrap_or_else(|| "Auto".to_string()),
+        reasoning_effort: top_level_value(&config, "model_reasoning_effort")
+            .filter(|value| REASONING_EFFORTS.contains(&value.as_str()))
+            .unwrap_or_else(|| "medium".to_string()),
         api_key_set: env_value(&env, ENV_KEY).is_some_and(|value| !value.is_empty()),
         codex_running: false,
     }
@@ -80,8 +86,8 @@ pub fn parse_model_ids(body: &str) -> Result<Vec<String>, GatewayError> {
     struct ModelItem {
         id: String,
     }
-    let payload: Payload = serde_json::from_str(body)
-        .map_err(|_| GatewayError("网关没有返回可用模型列表".into()))?;
+    let payload: Payload =
+        serde_json::from_str(body).map_err(|_| GatewayError("网关没有返回可用模型列表".into()))?;
     let mut ids: Vec<String> = payload
         .data
         .into_iter()
@@ -125,10 +131,11 @@ pub async fn fetch_model_ids(base_url: &str, api_key: &str) -> Result<Vec<String
 pub fn apply_gateway(codex_home: &Path, input: &CodexGatewayInput) -> Result<(), GatewayError> {
     let base_url = validate_base_url(&input.base_url)?;
     let model = validate_model(&input.model)?;
+    let reasoning_effort = validate_reasoning_effort(&input.reasoning_effort)?;
     let api_key = resolve_api_key(codex_home, &input.api_key)?;
 
     let config_text = read_to_string_if_utf8(&config_path(codex_home)).unwrap_or_default();
-    let next_config = merge_config(&config_text, &model, &base_url);
+    let next_config = merge_config(&config_text, &model, &reasoning_effort, &base_url);
     if next_config.contains(&api_key) {
         return Err(GatewayError("API Key 不能写入配置文件".into()));
     }
@@ -159,9 +166,10 @@ fn validate_base_url(raw: &str) -> Result<String, GatewayError> {
     if raw.chars().any(|ch| ch.is_control() || ch.is_whitespace()) {
         return Err(GatewayError("网关地址不能包含空格".into()));
     }
-    let mut url = Url::parse(raw).map_err(|_| GatewayError("网关地址无法识别，请以 https:// 开头".into()))?;
-    if url.scheme() != "https" {
-        return Err(GatewayError("网关地址必须是 https:// 链接".into()));
+    let mut url = Url::parse(raw)
+        .map_err(|_| GatewayError("网关地址无法识别，请以 http:// 或 https:// 开头".into()))?;
+    if url.scheme() != "https" && url.scheme() != "http" {
+        return Err(GatewayError("网关地址只支持 http:// 或 https://".into()));
     }
     if !url.username().is_empty() || url.password().is_some() {
         return Err(GatewayError("网关地址不能包含账号或密码".into()));
@@ -178,19 +186,36 @@ fn validate_base_url(raw: &str) -> Result<String, GatewayError> {
     Ok(text)
 }
 
+const REASONING_EFFORTS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh"];
+
 fn validate_model(raw: &str) -> Result<String, GatewayError> {
     let model = raw.trim();
     if model.is_empty() {
-        return Err(GatewayError("请填写默认模型".into()));
+        return Ok("Auto".to_string());
     }
     if model.chars().count() > 200
-        || model
-            .chars()
-            .any(|ch| ch.is_control() || ch.is_whitespace() || matches!(ch, '"' | '\\' | '#' | '\''))
+        || model.chars().any(|ch| {
+            ch.is_control() || ch.is_whitespace() || matches!(ch, '"' | '\\' | '#' | '\'')
+        })
     {
-        return Err(GatewayError("模型名只能包含普通字符，不能有空格或引号".into()));
+        return Err(GatewayError(
+            "模型名只能包含普通字符，不能有空格或引号".into(),
+        ));
     }
     Ok(model.to_string())
+}
+
+fn validate_reasoning_effort(raw: &str) -> Result<String, GatewayError> {
+    let effort = raw.trim();
+    if effort.is_empty() {
+        return Ok("medium".to_string());
+    }
+    if REASONING_EFFORTS.contains(&effort) {
+        return Ok(effort.to_string());
+    }
+    Err(GatewayError(
+        "思考深度只能是无、极低、轻度、中、高或极高".into(),
+    ))
 }
 
 fn validate_api_key(raw: &str) -> Result<String, GatewayError> {
@@ -204,9 +229,14 @@ fn validate_api_key(raw: &str) -> Result<String, GatewayError> {
     Ok(raw.to_string())
 }
 
-fn merge_config(current: &str, model: &str, base_url: &str) -> String {
+fn merge_config(current: &str, model: &str, reasoning_effort: &str, base_url: &str) -> String {
     let (mut lines, newline) = split_lines(current);
     set_top_key(&mut lines, "model", &format!("model = \"{model}\""));
+    set_top_key(
+        &mut lines,
+        "model_reasoning_effort",
+        &format!("model_reasoning_effort = \"{reasoning_effort}\""),
+    );
     set_top_key(
         &mut lines,
         "model_provider",
@@ -243,7 +273,8 @@ fn replace_provider_section(lines: &mut Vec<String>, base_url: &str) {
         }
         let start = index;
         index += 1;
-        while index < lines.len() && !header_name(&lines[index]).is_some_and(|name| !is_our_section(name))
+        while index < lines.len()
+            && !header_name(&lines[index]).is_some_and(|name| !is_our_section(name))
         {
             index += 1;
         }
@@ -294,7 +325,9 @@ fn top_level_value(config: &str, key: &str) -> Option<String> {
     let (lines, _) = split_lines(config);
     let top_end = top_scope_end(&lines);
     (0..top_end).find_map(|index| {
-        is_top_key(&lines[index], key).then(|| assignment_value(&lines[index])).flatten()
+        is_top_key(&lines[index], key)
+            .then(|| assignment_value(&lines[index]))
+            .flatten()
     })
 }
 
@@ -345,7 +378,10 @@ fn env_line_key(line: &str) -> Option<&str> {
     if trimmed.is_empty() || trimmed.starts_with('#') {
         return None;
     }
-    let trimmed = trimmed.strip_prefix("export ").unwrap_or(trimmed).trim_start();
+    let trimmed = trimmed
+        .strip_prefix("export ")
+        .unwrap_or(trimmed)
+        .trim_start();
     let (key, _) = trimmed.split_once('=')?;
     let key = key.trim();
     if key.is_empty() {
@@ -537,6 +573,7 @@ mod tests {
             &CodexGatewayInput {
                 base_url: "https://aiapi.yxrobot.com/v1/".into(),
                 model: "gpt-5.4".into(),
+                reasoning_effort: "medium".into(),
                 api_key: "sk-test-key".into(),
             },
         )
@@ -545,6 +582,7 @@ mod tests {
         let config = fs::read_to_string(config_path(&dir)).unwrap();
         let env = fs::read_to_string(env_path(&dir)).unwrap();
         assert!(config.contains("model = \"gpt-5.4\""));
+        assert!(config.contains("model_reasoning_effort = \"medium\""));
         assert!(config.contains("model_provider = \"yxrobot\""));
         assert!(config.contains("base_url = \"https://aiapi.yxrobot.com/v1\""));
         assert!(config.contains("env_key = \"YXROBOT_API_KEY\""));
@@ -575,6 +613,7 @@ mod tests {
             &CodexGatewayInput {
                 base_url: "https://aiapi.yxrobot.com/v1".into(),
                 model: "internal-model".into(),
+                reasoning_effort: "medium".into(),
                 api_key: "sk-one".into(),
             },
         )
@@ -592,6 +631,7 @@ mod tests {
             &CodexGatewayInput {
                 base_url: "https://aiapi.yxrobot.com/v1".into(),
                 model: "internal-model-2".into(),
+                reasoning_effort: "medium".into(),
                 api_key: String::new(),
             },
         )
@@ -610,17 +650,41 @@ mod tests {
             r#"{"data":[{"id":"openai/gpt-5.4"},{"id":"openai/gpt-5.4"},{"id":"  "},{"id":"claude-sonnet"}]}"#,
         )
         .unwrap();
-        assert_eq!(ids, vec!["claude-sonnet".to_string(), "openai/gpt-5.4".to_string()]);
+        assert_eq!(
+            ids,
+            vec!["claude-sonnet".to_string(), "openai/gpt-5.4".to_string()]
+        );
     }
 
     #[test]
-    fn rejects_http_empty_model_and_a_missing_key() {
+    fn accepts_http_and_auto_model() {
+        let dir = home("http-auto");
+        apply_gateway(
+            &dir,
+            &CodexGatewayInput {
+                base_url: "http://127.0.0.1:8787/v1/".into(),
+                model: "Auto".into(),
+                reasoning_effort: "high".into(),
+                api_key: "sk-test".into(),
+            },
+        )
+        .unwrap();
+        let status = read_gateway(&dir);
+        assert_eq!(status.base_url, "http://127.0.0.1:8787/v1");
+        assert_eq!(status.model, "Auto");
+        assert_eq!(status.reasoning_effort, "high");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rejects_non_http_urls_bad_models_and_a_missing_key() {
         let dir = home("reject");
         let bad_url = apply_gateway(
             &dir,
             &CodexGatewayInput {
-                base_url: "http://aiapi.yxrobot.com/v1".into(),
+                base_url: "ftp://aiapi.yxrobot.com/v1".into(),
                 model: "gpt-5.4".into(),
+                reasoning_effort: "medium".into(),
                 api_key: "sk-test".into(),
             },
         );
@@ -630,6 +694,7 @@ mod tests {
             &CodexGatewayInput {
                 base_url: "https://aiapi.yxrobot.com/v1".into(),
                 model: "bad model".into(),
+                reasoning_effort: "medium".into(),
                 api_key: "sk-test".into(),
             },
         );
@@ -639,6 +704,7 @@ mod tests {
             &CodexGatewayInput {
                 base_url: "https://aiapi.yxrobot.com/v1".into(),
                 model: "gpt-5.4".into(),
+                reasoning_effort: "medium".into(),
                 api_key: String::new(),
             },
         );

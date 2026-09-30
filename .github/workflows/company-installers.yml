@@ -1,8 +1,8 @@
 name: Company installers
 
-# Builds unsigned Mac and Windows installers and attaches them to a GitHub
-# Release on this repository. This does not use the official Release workflow:
-# no Apple notarization, no mirror publish, no v* tag.
+# Builds unsigned Mac, Windows, and Ubuntu installers and attaches them to a
+# GitHub Release on this repository. This does not use the official Release
+# workflow: no Apple notarization, no mirror publish, no v* tag.
 on:
   workflow_dispatch:
 
@@ -33,6 +33,14 @@ jobs:
             target: aarch64-pc-windows-msvc
             os: windows
             asset: CodexAppManager_arm64-setup.exe
+          - platform: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            os: linux
+            asset: CodexAppManager_amd64.deb
+          - platform: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            os: linux
+            asset: CodexAppManager_arm64.deb
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -104,6 +112,30 @@ jobs:
           mkdir -p dist
           cp "$setup" "dist/${{ matrix.asset }}"
 
+      - name: Install Linux build dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Build Ubuntu deb
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            npm run tauri build -- --bundles deb --target "${{ matrix.target }}" --ci && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::tauri build failed after 3 attempts"
+              exit 1
+            fi
+            echo "::warning::tauri build attempt ${attempt} failed — retrying in 20s"
+            sleep 20
+          done
+          deb="$(find "src-tauri/target/${{ matrix.target }}/release/bundle/deb" -name '*.deb' -print -quit)"
+          test -n "$deb"
+          mkdir -p dist
+          cp "$deb" "dist/${{ matrix.asset }}"
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ matrix.asset }}
@@ -113,6 +145,7 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -134,9 +167,10 @@ jobs:
           set -euo pipefail
           ls -lh dist
           tag="company-v0.5.10"
-          notes=$'公司内部安装包。未做苹果公证和 Windows 签名。\n\n- Mac 第一次打开若提示无法验证开发者：右键应用，选择打开。\n- Windows 若出现 SmartScreen：点“更多信息”，再点“仍要运行”。\n\n装好后打开设置里的「Codex 配置管理」，填自己的 API Key，加载模型后选带 anthropic/ 的名字，保存，完全退出 Codex，再开新对话。'
+          notes=$'公司内部安装包。未做苹果公证和 Windows 签名。\n\n- Mac 第一次打开若提示无法验证开发者：右键应用，选择打开。\n- Windows 若出现 SmartScreen：点“更多信息”，再点“仍要运行”。\n- Ubuntu：x64 下 CodexAppManager_amd64.deb，ARM 下 CodexAppManager_arm64.deb。在终端执行 sudo apt install ./文件名.deb。\n\n装好后打开设置里的「Codex 配置管理」，填自己的 API Key，加载模型后选带 anthropic/ 的名字，保存，完全退出 Codex，再开新对话。'
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" dist/* --clobber
+            gh release edit "$tag" --notes "$notes"
           else
             gh release create "$tag" dist/* --title "公司内部安装包 0.5.10" --notes "$notes"
           fi

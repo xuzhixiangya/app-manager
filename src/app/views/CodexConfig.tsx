@@ -6,11 +6,13 @@ import { useI18n } from "../i18n";
 import { NavBar } from "../components";
 
 const DEFAULT_URL = "https://aiapi.yxrobot.com/v1";
+const AUTO_MODEL = "Auto";
 
 export function CodexConfig({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();
   const [baseUrl, setBaseUrl] = useState(DEFAULT_URL);
-  const [model, setModel] = useState("");
+  const [model, setModel] = useState(AUTO_MODEL);
+  const [reasoningEffort, setReasoningEffort] = useState("medium");
   const [apiKey, setApiKey] = useState("");
   const [apiKeySet, setApiKeySet] = useState(false);
   const [codexRunning, setCodexRunning] = useState(false);
@@ -28,7 +30,8 @@ export function CodexConfig({ onBack }: { onBack: () => void }) {
       .then((status) => {
         if (cancelled) return;
         setBaseUrl(status.baseUrl || DEFAULT_URL);
-        setModel(status.model);
+        setModel(status.model || AUTO_MODEL);
+        setReasoningEffort(status.reasoningEffort || "medium");
         setApiKeySet(status.apiKeySet);
         setCodexRunning(status.codexRunning);
       })
@@ -51,9 +54,11 @@ export function CodexConfig({ onBack }: { onBack: () => void }) {
         baseUrl,
         apiKey,
       });
-      const next = model && !ids.includes(model) ? [model, ...ids] : ids;
+      const chosen = model || AUTO_MODEL;
+      const rest = ids.filter((id) => id !== AUTO_MODEL && id !== chosen);
+      const next = [AUTO_MODEL, ...(chosen === AUTO_MODEL ? [] : [chosen]), ...rest];
       setModels(next);
-      if (!model && next[0]) setModel(next[0]);
+      setModel(chosen);
     } catch (cause) {
       setModels([]);
       setError(errorMessage(cause));
@@ -69,11 +74,13 @@ export function CodexConfig({ onBack }: { onBack: () => void }) {
     try {
       const status = await managerApi.setCodexGateway({
         baseUrl,
-        model,
+        model: model || AUTO_MODEL,
+        reasoningEffort,
         apiKey,
       });
       setBaseUrl(status.baseUrl);
-      setModel(status.model);
+      setModel(status.model || AUTO_MODEL);
+      setReasoningEffort(status.reasoningEffort || "medium");
       setApiKey("");
       setApiKeySet(status.apiKeySet);
       setCodexRunning(status.codexRunning);
@@ -211,6 +218,34 @@ export function CodexConfig({ onBack }: { onBack: () => void }) {
               </button>
               <span className="rsub" style={{ display: "block", marginTop: 8 }}>
                 {t("config.modelHint")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="group">
+          <div className="group-h">{t("config.reasoning")}</div>
+          <div className="list">
+            <div className="row" style={{ display: "block" }}>
+              <select
+                className="input"
+                aria-label={t("config.reasoning")}
+                value={reasoningEffort}
+                disabled={loading || saving || codexRunning}
+                onChange={(event) => {
+                  setSaved(false);
+                  setReasoningEffort(event.target.value);
+                }}
+              >
+                <option value="none">{t("config.reasoning.none")}</option>
+                <option value="minimal">{t("config.reasoning.minimal")}</option>
+                <option value="low">{t("config.reasoning.low")}</option>
+                <option value="medium">{t("config.reasoning.medium")}</option>
+                <option value="high">{t("config.reasoning.high")}</option>
+                <option value="xhigh">{t("config.reasoning.xhigh")}</option>
+              </select>
+              <span className="rsub" style={{ display: "block", marginTop: 8 }}>
+                {t("config.reasoningHint")}
               </span>
             </div>
           </div>

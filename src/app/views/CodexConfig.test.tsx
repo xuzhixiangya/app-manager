@@ -45,12 +45,14 @@ describe("Codex gateway config", () => {
     api.getCodexGateway.mockResolvedValue({
       baseUrl: "https://aiapi.yxrobot.com/v1",
       model: "",
+      reasoningEffort: "medium",
       apiKeySet: false,
       codexRunning: false,
     });
     api.setCodexGateway.mockResolvedValue({
       baseUrl: "https://aiapi.yxrobot.com/v1",
       model: "gpt-5.4",
+      reasoningEffort: "medium",
       apiKeySet: true,
       codexRunning: false,
     });
@@ -58,13 +60,17 @@ describe("Codex gateway config", () => {
     renderConfig();
     const key = await screen.findByLabelText("API Key");
     await user.type(key, "sk-employee");
-    await user.type(screen.getByLabelText("默认模型"), "gpt-5.4");
+    const model = screen.getByLabelText("默认模型");
+    expect(model).toHaveValue("Auto");
+    await user.clear(model);
+    await user.type(model, "gpt-5.4");
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() =>
       expect(api.setCodexGateway).toHaveBeenCalledWith({
         baseUrl: "https://aiapi.yxrobot.com/v1",
         model: "gpt-5.4",
+        reasoningEffort: "medium",
         apiKey: "sk-employee",
       }),
     );
@@ -76,6 +82,7 @@ describe("Codex gateway config", () => {
     api.getCodexGateway.mockResolvedValue({
       baseUrl: "https://aiapi.yxrobot.com/v1",
       model: "gpt-5.4",
+      reasoningEffort: "medium",
       apiKeySet: true,
       codexRunning: true,
     });
@@ -89,6 +96,7 @@ describe("Codex gateway config", () => {
     api.getCodexGateway.mockResolvedValue({
       baseUrl: "https://aiapi.yxrobot.com/v1",
       model: "openai/gpt-5.4",
+      reasoningEffort: "high",
       apiKeySet: true,
       codexRunning: false,
     });
@@ -102,6 +110,7 @@ describe("Codex gateway config", () => {
 
     const picker = await screen.findByRole("combobox", { name: "默认模型" });
     expect(picker).toHaveValue("openai/gpt-5.4");
+    expect(screen.getByRole("combobox", { name: "思考深度" })).toHaveValue("high");
     await user.selectOptions(picker, "claude-sonnet");
     expect(picker).toHaveValue("claude-sonnet");
   });

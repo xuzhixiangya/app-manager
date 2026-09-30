@@ -1798,6 +1798,54 @@ pub async fn list_codex_gateway_models(
         .map_err(|error| AppError::Internal(error.to_string()).into())
 }
 
+fn require_linux() -> Result<(), CommandError> {
+    if cfg!(target_os = "linux") {
+        Ok(())
+    } else {
+        Err(AppError::UnsupportedPlatform.into())
+    }
+}
+
+#[tauri::command]
+pub fn linux_status() -> Result<crate::app::linux_codex::LinuxCodexStatus, CommandError> {
+    require_linux()?;
+    crate::app::linux_codex::read_status().map_err(|error| AppError::Internal(error).into())
+}
+
+#[tauri::command]
+pub async fn linux_install() -> Result<crate::app::linux_codex::LinuxCodexStatus, CommandError> {
+    require_linux()?;
+    let _busy = crate::app::linux_codex::BusyGuard::try_begin()
+        .map_err(|error| AppError::Internal(error))?;
+    let asset = crate::app::linux_codex::official_deb(std::env::consts::ARCH)
+        .map_err(|error| AppError::Internal(error))?;
+    let path = crate::app::linux_codex::download_path(asset.filename);
+    crate::app::linux_codex::download_deb(&asset, &path)
+        .await
+        .map_err(|error| AppError::Internal(error))?;
+    let installed = crate::app::linux_codex::install_downloaded_deb(&path);
+    if installed.is_ok() {
+        let _ = std::fs::remove_file(&path);
+    }
+    installed.map_err(|error| AppError::Internal(error))?;
+    crate::app::linux_codex::read_status().map_err(|error| AppError::Internal(error).into())
+}
+
+#[tauri::command]
+pub fn linux_launch() -> Result<(), CommandError> {
+    require_linux()?;
+    crate::app::linux_codex::launch().map_err(|error| AppError::Internal(error).into())
+}
+
+#[tauri::command]
+pub fn linux_uninstall(keep_data: bool) -> Result<(), CommandError> {
+    require_linux()?;
+    let _busy = crate::app::linux_codex::BusyGuard::try_begin()
+        .map_err(|error| AppError::Internal(error))?;
+    crate::app::linux_codex::uninstall_package(keep_data)
+        .map_err(|error| AppError::Internal(error).into())
+}
+
 #[tauri::command]
 pub fn get_config_health(state: State<'_, ManagerState>) -> ConfigHealth {
     // Always re-read from disk so the UI sees post-restore/reset truth, not a

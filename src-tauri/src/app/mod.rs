@@ -6,6 +6,7 @@ pub mod config_health;
 pub mod diagnostics;
 pub mod disk;
 pub mod install_tx;
+pub mod linux_codex;
 pub mod logging;
 pub mod mac_update;
 pub mod msix_policy_tx;

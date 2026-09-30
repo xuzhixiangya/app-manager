@@ -40,6 +40,7 @@ import {
   StatusBanner,
 } from "../components";
 import { currentPlatform } from "../platform";
+import { LinuxHome } from "./LinuxHome";
 import { WinHome } from "./WinHome";
 import { mib, fmtDateTime } from "../format";
 import { useHomeMotion } from "../motion";
@@ -97,13 +98,20 @@ export function Home(props: { onOpenSettings: () => void }) {
       active = false;
     };
   }, []);
-  return currentPlatform() === "windows" ? (
-    <WinHome
-      {...props}
-      hostArchitecture={hostArchitecture}
-      managerUpdatePrompt={managerUpdatePrompt}
-    />
-  ) : (
+  const platform = currentPlatform();
+  if (platform === "windows") {
+    return (
+      <WinHome
+        {...props}
+        hostArchitecture={hostArchitecture}
+        managerUpdatePrompt={managerUpdatePrompt}
+      />
+    );
+  }
+  if (platform === "linux") {
+    return <LinuxHome {...props} />;
+  }
+  return (
     <MacHome
       {...props}
       hostArchitecture={hostArchitecture}

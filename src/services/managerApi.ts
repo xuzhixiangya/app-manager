@@ -13,6 +13,7 @@ import type {
   CodexUpdatePlatform,
   CodexGatewayInput,
   CodexGatewayStatus,
+  LinuxCodexStatus,
   ConfigHealth,
   ConfigWhich,
   Diagnostics,
@@ -1091,7 +1092,8 @@ export const managerApi = {
     if (!hasTauriRuntime()) {
       return Promise.resolve({
         baseUrl: "https://aiapi.yxrobot.com/v1",
-        model: "",
+        model: "Auto",
+        reasoningEffort: "medium",
         apiKeySet: false,
         codexRunning: false,
       });
@@ -1109,6 +1111,21 @@ export const managerApi = {
       return Promise.resolve([]);
     }
     return invoke<string[]>("list_codex_gateway_models", { input });
+  },
+  linuxStatus(): Promise<LinuxCodexStatus> {
+    if (!hasTauriRuntime()) {
+      return Promise.resolve({ installed: false, version: null, arch: "amd64" });
+    }
+    return invoke<LinuxCodexStatus>("linux_status");
+  },
+  linuxInstall(): Promise<LinuxCodexStatus> {
+    return invoke<LinuxCodexStatus>("linux_install");
+  },
+  linuxLaunch(): Promise<void> {
+    return invoke<void>("linux_launch");
+  },
+  linuxUninstall(keepData: boolean): Promise<void> {
+    return invoke<void>("linux_uninstall", { keepData });
   },
   openCodexHome(): Promise<void> {
     if (!hasTauriRuntime()) {

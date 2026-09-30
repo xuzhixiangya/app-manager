@@ -78,13 +78,23 @@ export interface OperationCompletion {
 export interface CodexGatewayStatus {
   baseUrl: string;
   model: string;
+  /** Codex reasoning effort: none, minimal, low, medium, high, xhigh. */
+  reasoningEffort: string;
   apiKeySet: boolean;
   codexRunning: boolean;
+}
+
+export interface LinuxCodexStatus {
+  installed: boolean;
+  version: string | null;
+  /** Debian architecture label: amd64 or arm64. */
+  arch: string;
 }
 
 export interface CodexGatewayInput {
   baseUrl: string;
   model: string;
+  reasoningEffort: string;
   /** Empty keeps the key already stored on this computer. */
   apiKey: string;
 }

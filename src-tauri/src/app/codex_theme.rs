@@ -1590,7 +1590,7 @@ fn installed_codex_path() -> Result<PathBuf, AppError> {
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn codex_running() -> bool {
-    false
+    crate::app::linux_codex::chatgpt_running()
 }
 
 pub(crate) fn codex_process_running() -> bool {
