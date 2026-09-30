@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
-            npm run tauri build -- --bundles dmg --target "${{ matrix.target }}" --no-sign --ci && break
+            npm run tauri build -- --bundles app --target "${{ matrix.target }}" --no-sign --ci && break
             if [ "$attempt" -eq 3 ]; then
               echo "::error::tauri build failed after 3 attempts"
               exit 1
@@ -79,7 +79,11 @@ jobs:
             sleep 20
           done
           app="$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" -maxdepth 1 -name '*.app' -print -quit)"
-          test -n "$app"
+          if [ -z "$app" ]; then
+            echo "::error::macOS app bundle was not left on disk after the build"
+            find "src-tauri/target/${{ matrix.target }}/release/bundle" -maxdepth 3 -print
+            exit 1
+          fi
           # Tauri's unsigned bundle is only linker-signed. macOS then tells
           # people the downloaded app is damaged. Seal an ad-hoc signature
           # and pack that app into the dmg.
