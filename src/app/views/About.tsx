@@ -42,6 +42,8 @@ export function About({ onBack }: { onBack: () => void }) {
         setMgrMsg(t("about.mgrFound", { version: result.version }));
       } else if (result.kind === "none") {
         setMgrMsg(t("about.mgrUpToDate"));
+      } else if (result.kind === "disabled") {
+        setMgrMsg(t("about.mgrDisabled"));
       } else if (result.kind === "development") {
         setMgrMsg(t("about.mgrDev"));
       } else {

@@ -69,7 +69,9 @@ export function useManagerUpdatePrompt(): ManagerUpdatePromptController {
           return;
         }
         // An offline/feed failure is not evidence that a known update vanished.
-        if (result.kind === "none") replaceUpdate(null);
+        if (result.kind === "none" || result.kind === "disabled") {
+          replaceUpdate(null);
+        }
       })
       .catch(() => {
         // Startup checks are deliberately quiet. About keeps the explicit

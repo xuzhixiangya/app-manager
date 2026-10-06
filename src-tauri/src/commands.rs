@@ -415,6 +415,7 @@ pub struct ManagerUpdateMetadata {
     pub body: Option<String>,
 }
 
+#[allow(dead_code)] // kept for the signed updater; self-update is disabled for local builds
 fn manager_updater_builder(
     app: &AppHandle,
 ) -> Result<tauri_plugin_updater::UpdaterBuilder, AppError> {
@@ -453,53 +454,23 @@ fn manager_update_or_stale<T>(update: Option<T>) -> Result<T, AppError> {
 
 #[tauri::command]
 pub async fn manager_check_update(
-    app: AppHandle,
+    _app: AppHandle,
 ) -> Result<Option<ManagerUpdateMetadata>, CommandError> {
-    let updater = manager_updater_builder(&app)?
-        .build()
-        .map_err(|e| AppError::Engine(format!("build manager updater: {e}")))?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|e| AppError::Engine(format!("check manager update: {e}")))?;
-    Ok(update.map(|update| ManagerUpdateMetadata {
-        version: update.version,
-        current_version: update.current_version,
-        body: update.body,
-    }))
+    // Never consult the upstream manager feed. A successful install would
+    // replace this locally modified build with the original author's package.
+    Ok(None)
 }
 
 #[tauri::command]
 pub async fn manager_install_update(
-    app: AppHandle,
-    expected_version: String,
-    expected_current_version: String,
+    _app: AppHandle,
+    _expected_version: String,
+    _expected_current_version: String,
 ) -> Result<(), CommandError> {
-    let updater = manager_updater_builder(&app)?
-        .build()
-        .map_err(|e| AppError::Engine(format!("build manager updater: {e}")))?;
-    let update = manager_update_or_stale(
-        updater
-            .check()
-            .await
-            .map_err(|e| AppError::Engine(format!("check manager update before install: {e}")))?,
-    )?;
-    if !manager_update_matches_confirmation(
-        &update.version,
-        &update.current_version,
-        &expected_version,
-        &expected_current_version,
-    ) {
-        return Err(AppError::StaleExpectation(
-            "管理器更新内容已变化，请重新检查后再确认。".to_string(),
-        )
-        .into());
-    }
-    update
-        .download_and_install(|_, _| {}, || {})
-        .await
-        .map_err(|e| AppError::Engine(format!("install manager update: {e}")))?;
-    Ok(())
+    Err(AppError::Engine(
+        "管理器自更新已关闭，避免用官方安装包覆盖本地修改。".to_string(),
+    )
+    .into())
 }
 
 fn windows_domain_settings_for_persisted(state: &ManagerState) -> DomainAppSettings {

@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { relaunch } from "@tauri-apps/plugin-process";
 
 import type {
   AncillaryRetryReport,
@@ -50,6 +49,7 @@ export type ManagerUpdateCheck =
   | { kind: "development" }
   | { kind: "unavailable" }
   | { kind: "none" }
+  | { kind: "disabled" }
   | ManagerUpdateAvailable;
 
 export interface ManagerUpdateAvailable {
@@ -59,12 +59,6 @@ export interface ManagerUpdateAvailable {
   body?: string;
   installAndRelaunch: () => Promise<void>;
   discard: () => Promise<void>;
-}
-
-interface ManagerUpdateMetadata {
-  version: string;
-  currentVersion: string;
-  body?: string;
 }
 
 export interface FrontendErrorPayload {
@@ -950,24 +944,11 @@ export const managerApi = {
       expected,
     });
   },
-  // Self-update the manager itself via the Tauri updater (minisign-signed,
-  // full bundle). Endpoints + signing are server-side (see roadmap §4).
+  // The upstream feed publishes the original author's signed manager build.
+  // Installing it would replace this locally modified copy, so self-update
+  // stays off. Codex app updates are a separate path and are unaffected.
   async checkManagerUpdate(): Promise<ManagerUpdateCheck> {
-    if (!hasTauriRuntime()) {
-      return { kind: "development" };
-    }
-    // A routine check shouldn't surface a scary error when the release feed
-    // isn't published yet or is unreachable.
-    const update = await invoke<ManagerUpdateMetadata | null>(
-      "manager_check_update",
-    ).catch(() => undefined);
-    if (update === undefined) {
-      return { kind: "unavailable" };
-    }
-    if (!update) {
-      return { kind: "none" };
-    }
-    return managerUpdateAvailable(update);
+    return { kind: "disabled" };
   },
   macStatus(): Promise<MacInstallStatus> {
     if (!hasTauriRuntime()) {
@@ -1622,22 +1603,3 @@ export const managerApi = {
     return invoke<void>("win_launch_codex");
   },
 };
-
-function managerUpdateAvailable(
-  update: ManagerUpdateMetadata,
-): ManagerUpdateAvailable {
-  return {
-    kind: "available",
-    version: update.version,
-    currentVersion: update.currentVersion,
-    body: update.body,
-    installAndRelaunch: async () => {
-      await invoke<void>("manager_install_update", {
-        expectedVersion: update.version,
-        expectedCurrentVersion: update.currentVersion,
-      });
-      await relaunch();
-    },
-    discard: async () => {},
-  };
-}

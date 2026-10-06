@@ -24,5 +24,10 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 1420,
     strictPort: true,
+    // The Rust build locks files under src-tauri/target. Watching them on
+    // Windows makes the dev server exit with EBUSY and takes the app down.
+    watch: {
+      ignored: ["**/src-tauri/**"],
+    },
   },
 });
