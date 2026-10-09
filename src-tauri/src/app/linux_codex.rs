@@ -124,7 +124,7 @@ pub async fn download_deb(asset: &DebAsset, dest: &Path) -> Result<(), String> {
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent).map_err(|error| format!("无法创建临时目录：{error}"))?;
     }
-    let client = reqwest::Client::builder()
+    let client = crate::app::http_client::builder()
         .connect_timeout(Duration::from_secs(20))
         .timeout(Duration::from_secs(30 * 60))
         .build()

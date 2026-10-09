@@ -106,7 +106,8 @@ pub async fn fetch_model_ids(base_url: &str, api_key: &str) -> Result<Vec<String
     let base_url = validate_base_url(base_url)?;
     let api_key = validate_api_key(api_key)?;
     let url = format!("{base_url}/models");
-    let client = reqwest::Client::builder()
+    let client = crate::app::http_client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
         .timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|_| GatewayError("无法连接网关".into()))?;

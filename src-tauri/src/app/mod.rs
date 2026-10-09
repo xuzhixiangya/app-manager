@@ -5,6 +5,7 @@ pub mod codex_theme;
 pub mod config_health;
 pub mod diagnostics;
 pub mod disk;
+pub mod http_client;
 pub mod install_tx;
 pub mod linux_codex;
 pub mod logging;
